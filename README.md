@@ -1,6 +1,6 @@
 # schedule
 
-A new Flutter project. For study
+A Schedule app 
 
 ## Getting Started
 
