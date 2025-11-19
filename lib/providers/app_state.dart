@@ -23,7 +23,6 @@ class AppState extends ChangeNotifier {
   }
 
   // 認証関連
-
   Future<String?> register(String email, String password) async {
 
     try {
@@ -69,7 +68,6 @@ class AppState extends ChangeNotifier {
   // --- データ操作関連 ---
 
   // スケジュール追加
-
   Future<void> addSchedule(String title, DateTime date, String description) async {
 
     if (_user == null) return;
@@ -91,7 +89,6 @@ class AppState extends ChangeNotifier {
   }
 
   // スケジュール削除
-
   Future<void> deleteSchedule(String id) async {
 
     if (_user == null) return;
@@ -102,8 +99,22 @@ class AppState extends ChangeNotifier {
 
   }
 
-  // ユーザー名（プロフィール）の更新
+  Future<void> updateSchedule(String id, String title, DateTime date, String description) async {
+    if (_user == null) return;
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(_user!.uid)
+        .collection('schedules')
+        .doc(id)
+        .update({
+      'title': title,
+      'date': Timestamp.fromDate(date),
+      'description': description,
+      // createdAtは更新しない（作成日時はそのまま残すため）
+    });
+  }
 
+  // ユーザー名（プロフィール）の更新
   Future<void> updateProfileName(String name) async {
 
     if (_user == null) return;

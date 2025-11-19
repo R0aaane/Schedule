@@ -12,6 +12,33 @@ class ScheduleListScreen extends StatelessWidget {
 
   const ScheduleListScreen({super.key});
 
+  // 削除確認ダイアログを表示する関数
+  void _confirmDelete(BuildContext context, AppState appState, String id) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('削除確認'),
+        content: const Text('本当にこの予定を削除しますか？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx), // キャンセル
+            child: const Text('キャンセル'),
+          ),
+          TextButton(
+            onPressed: () {
+              appState.deleteSchedule(id); // 削除実行
+              Navigator.pop(ctx); // ダイアログを閉じる
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('削除しました')),
+              );
+            },
+            child: const Text('削除', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
 
   Widget build(BuildContext context) {
@@ -115,7 +142,7 @@ class ScheduleListScreen extends StatelessWidget {
 
                     icon: const Icon(Icons.delete, color: Colors.grey),
 
-                    onPressed: () => appState.deleteSchedule(item.id),
+                    onPressed: () => _confirmDelete(context, appState, item.id),
 
                   ),
 

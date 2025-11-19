@@ -7,135 +7,133 @@ import '../models/schedule.dart';     // モデル
 import '../screens/setting.dart';     //　設定画面
 
 class AddScheduleScreen extends StatefulWidget {
-
-  const AddScheduleScreen({super.key});
-
+  // 編集する場合のために、既存のスケジュールを受け取れるようにする（nullなら新規追加）
+  final Schedule? scheduleToEdit;
+  const AddScheduleScreen({super.key, this.scheduleToEdit});
   @override
-
   State<AddScheduleScreen> createState() => _AddScheduleScreenState();
-
 }
-
 class _AddScheduleScreenState extends State<AddScheduleScreen> {
-
   final _titleController = TextEditingController();
-
   final _descController = TextEditingController();
-
-  DateTime _selectedDate = DateTime.now();
-
-  TimeOfDay _selectedTime = TimeOfDay.now();
-
-  Future<void> _pickDate() async {
-
-    final picked = await showDatePicker(context: context, initialDate: _selectedDate, firstDate: DateTime(2000), lastDate: DateTime(2100));
-
-    if (picked != null) setState(() => _selectedDate = picked);
-
-  }
-
-  Future<void> _pickTime() async {
-
-    final picked = await showTimePicker(context: context, initialTime: _selectedTime);
-
-    if (picked != null) setState(() => _selectedTime = picked);
-
-  }
-
-  void _save() async {
-
-    if (_titleController.text.isEmpty) return;
-
-    final dateTime = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day, _selectedTime.hour, _selectedTime.minute);
-
-    await context.read<AppState>().addSchedule(_titleController.text, dateTime, _descController.text);
-
-    if (mounted) {
-
-      Navigator.pop(context);
-
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('追加しました')));
-
-    }
-
-  }
-
+  late DateTime _selectedDate;
+  late TimeOfDay _selectedTime;
   @override
-
-  Widget build(BuildContext context) {
-
-    return Scaffold(
-
-      appBar: AppBar(
-
-        title: const Text('予定を追加'),
-
-        actions: [
-
-          // 追加画面にも設定ボタンを配置
-
-          IconButton(
-
-            icon: const Icon(Icons.settings),
-
-            tooltip: '設定',
-
-            onPressed: () {
-
-              Navigator.push(
-
-                context,
-
-                MaterialPageRoute(builder: (context) => const SettingsScreen()),
-
-              );
-
-            },
-
-          ),
-
-        ],
-
-      ),
-
-      body: Center(
-
-        child: Container(
-
-          constraints: const BoxConstraints(maxWidth: 600),
-
-          padding: const EdgeInsets.all(16),
-
-          child: ListView(
-
-            children: [
-
-              TextField(controller: _titleController, decoration: const InputDecoration(labelText: 'タイトル')),
-
-              const SizedBox(height: 20),
-
-              ListTile(title: Text(DateFormat('yyyy/MM/dd').format(_selectedDate)), trailing: const Icon(Icons.calendar_today), onTap: _pickDate),
-
-              ListTile(title: Text(_selectedTime.format(context)), trailing: const Icon(Icons.access_time), onTap: _pickTime),
-
-              const SizedBox(height: 20),
-
-              TextField(controller: _descController, decoration: const InputDecoration(labelText: '詳細')),
-
-              const SizedBox(height: 30),
-
-              ElevatedButton(onPressed: _save, child: const Text('保存する')),
-
-            ],
-
-          ),
-
-        ),
-
-      ),
-
-    );
-
+  void initState() {
+    super.initState();
+    // 編集モード（データが渡された）なら、その値で初期化する
+    if (widget.scheduleToEdit != null) {
+      final item = widget.scheduleToEdit!;
+      _titleController.text = item.title;
+      _descController.text = item.description;
+      _selectedDate = item.date;
+      _selectedTime = TimeOfDay.fromDateTime(item.date);
+    } else {
+      // 新規モードなら現在時刻
+      _selectedDate = DateTime.now();
+      _selectedTime = TimeOfDay.now();
+    }
   }
-
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+        context: context,
+        initialDate: _selectedDate,
+        firstDate: DateTime(2000),
+        lastDate: DateTime(2100));
+    if (picked != null) setState(() => _selectedDate = picked);
+  }
+  Future<void> _pickTime() async {
+    final picked = await showTimePicker(
+        context: context, initialTime: _selectedTime);
+    if (picked != null) setState(() => _selectedTime = picked);
+  }
+  void _save() async {
+    if (_titleController.text.isEmpty) return;
+    final dateTime = DateTime(
+      _selectedDate.year, _selectedDate.month, _selectedDate.day,
+      _selectedTime.hour, _selectedTime.minute,
+    );
+    final appState = context.read<AppState>();
+    if (widget.scheduleToEdit != null) {
+      // ★編集モード: 更新処理を呼ぶ
+      await appState.updateSchedule(
+        widget.scheduleToEdit!.id,
+        _titleController.text,
+        dateTime,
+        _descController.text,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('変更を保存しました')),
+        );
+      }
+    } else {
+      // ★新規モード: 追加処理を呼ぶ
+      await appState.addSchedule(
+        _titleController.text,
+        dateTime,
+        _descController.text,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('追加しました')),
+        );
+      }
+    }
+    if (mounted) {
+      Navigator.pop(context); // 画面を閉じる
+    }
+  }
+  @override
+  Widget build(BuildContext context) {
+    // 画面タイトルを使い分ける
+    final isEdit = widget.scheduleToEdit != null;
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(isEdit ? '予定を編集' : '予定を追加'),
+      ),
+      body: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 600),
+          padding: const EdgeInsets.all(16),
+          child: ListView(
+            children: [
+              TextField(
+                controller: _titleController,
+                decoration: const InputDecoration(labelText: 'タイトル', border: OutlineInputBorder()),
+              ),
+              const SizedBox(height: 20),
+              ListTile(
+                title: Text(DateFormat('yyyy/MM/dd').format(_selectedDate)),
+                trailing: const Icon(Icons.calendar_today),
+                shape: RoundedRectangleBorder(side: const BorderSide(color: Colors.grey), borderRadius: BorderRadius.circular(4)),
+                onTap: _pickDate,
+              ),
+              const SizedBox(height: 10),
+              ListTile(
+                title: Text(_selectedTime.format(context)),
+                trailing: const Icon(Icons.access_time),
+                shape: RoundedRectangleBorder(side: const BorderSide(color: Colors.grey), borderRadius: BorderRadius.circular(4)),
+                onTap: _pickTime,
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: _descController,
+                decoration: const InputDecoration(labelText: '詳細', border: OutlineInputBorder()),
+                maxLines: 3,
+              ),
+              const SizedBox(height: 30),
+              SizedBox(
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: _save,
+                  child: Text(isEdit ? '変更を保存する' : '追加する'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

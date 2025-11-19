@@ -3,13 +3,14 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/schedule.dart';
 import '../providers/app_state.dart';
+import '../screens/schedule.dart';
+import '../screens/list-add.dart';
 
 class ScheduleDetailScreen extends StatelessWidget {
 
   final Schedule schedule;
 
   // コンストラクタで、表示したいスケジュールのデータを受け取る
-
   const ScheduleDetailScreen({super.key, required this.schedule});
 
   @override
@@ -21,7 +22,26 @@ class ScheduleDetailScreen extends StatelessWidget {
         title: const Text('詳細'),
 
         actions: [
-
+          IconButton(
+            icon: const
+Icon(Icons.edit),
+            tooltip: '編集',
+            onPressed: () async {
+              //編集画面へ
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AddScheduleScreen(scheduleToEdit: schedule),
+                ),
+              );
+              // 編集から戻ってきたら、詳細画面も閉じて一覧に戻る
+              // (データを最新化するためには一覧に戻るのが一番シンプルです)
+              if (context.mounted) {
+                Navigator.pop(context);
+              }
+            },
+          ),
+          const SizedBox(width: 8),
           // ここでも削除できるようにしておくと便利
 
           IconButton(
@@ -37,15 +57,13 @@ class ScheduleDetailScreen extends StatelessWidget {
 
                 context: context,
 
-                builder: (ctx) =>
-                    AlertDialog(
+                builder: (ctx) => AlertDialog(
 
                       title: const Text('削除しますか？'),
 
                       content: const Text('この操作は取り消せません。'),
 
                       actions: [
-
                         TextButton(
 
                           onPressed: () => Navigator.pop(ctx),

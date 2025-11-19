@@ -4,6 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart';
+
 import 'firebase_options.dart';
 
 import '../providers/app_state.dart'; // 状態管理
@@ -19,8 +21,9 @@ void main() async {
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  runApp(
+  await initializeDateFormatting('ja');
 
+  runApp(
     ChangeNotifierProvider(
 
       create: (context) => AppState(),
