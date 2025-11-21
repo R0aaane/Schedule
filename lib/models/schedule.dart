@@ -1,24 +1,19 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Schedule {
-
   final String id;
-
   final String title;
-
   final DateTime date;
-
   final String description;
+  final String? imageUrl;
 
   Schedule({
 
     required this.id,
-
     required this.title,
-
     required this.date,
-
     this.description = '',
+    this.imageUrl,
 
   });
 
@@ -29,12 +24,10 @@ class Schedule {
     return Schedule(
 
       id: doc.id,
-
       title: data['title'] ?? '',
-
       date: (data['date'] as Timestamp).toDate(),
-
       description: data['description'] ?? '',
+      imageUrl: data['imageUrl'],
 
     );
 

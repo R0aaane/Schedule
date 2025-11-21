@@ -1,7 +1,11 @@
+import 'dart:io';
+import 'package:path/path.dart' as path;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import '../models/schedule.dart';
+
 
 
 class AppState extends ChangeNotifier {
@@ -67,21 +71,41 @@ class AppState extends ChangeNotifier {
 
   // --- データ操作関連 ---
 
+  Future<String?> uploadImage(File file) async {
+    if (_user == null) return null;
+    try {
+      final String uid = _user!.uid;
+      final String fileName = path.basename(file.path);
+      // 'users/{uid}/images/{ファイル名}' のパスでStorageにアップロード
+      final Reference storageRef = FirebaseStorage.instance
+          .ref()
+          .child('users')
+          .child(uid)
+          .child('images')
+          .child('${DateTime.now().millisecondsSinceEpoch}_$fileName');
+      final UploadTask uploadTask = storageRef.putFile(file);
+      final TaskSnapshot snapshot = await uploadTask;
+      // アップロードした画像のダウンロードURLを取得
+      final String downloadUrl = await snapshot.ref.getDownloadURL();
+      return downloadUrl;
+    } catch (e) {
+      debugPrint('Error uploading image: $e');
+      return null;
+    }
+  }
+
   // スケジュール追加
-  Future<void> addSchedule(String title, DateTime date, String description) async {
+  Future<void> addSchedule(String title, DateTime date, String description, {String? imageUrl}) async {
 
     if (_user == null) return;
 
     await FirebaseFirestore.instance
-
         .collection('users').doc(_user!.uid).collection('schedules').add({
 
       'title': title,
-
       'date': Timestamp.fromDate(date),
-
       'description': description,
-
+      'imageUrl':imageUrl,
       'createdAt': FieldValue.serverTimestamp(),
 
     });
@@ -99,7 +123,7 @@ class AppState extends ChangeNotifier {
 
   }
 
-  Future<void> updateSchedule(String id, String title, DateTime date, String description) async {
+  Future<void> updateSchedule(String id, String title, DateTime date, String description, {String? imageUrl}) async {
     if (_user == null) return;
     await FirebaseFirestore.instance
         .collection('users')
@@ -110,6 +134,7 @@ class AppState extends ChangeNotifier {
       'title': title,
       'date': Timestamp.fromDate(date),
       'description': description,
+      'imageUrl':imageUrl,
       // createdAtは更新しない（作成日時はそのまま残すため）
     });
   }

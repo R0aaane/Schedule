@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -18,6 +20,9 @@ class _AddScheduleScreenState extends State<AddScheduleScreen> {
   final _descController = TextEditingController();
   late DateTime _selectedDate;
   late TimeOfDay _selectedTime;
+  File? _selectedImageFile;
+  String? _initialImageUrl;
+
   @override
   void initState() {
     super.initState();
@@ -28,6 +33,7 @@ class _AddScheduleScreenState extends State<AddScheduleScreen> {
       _descController.text = item.description;
       _selectedDate = item.date;
       _selectedTime = TimeOfDay.fromDateTime(item.date);
+      _initialImageUrl = item.imageUrl;
     } else {
       // 新規モードなら現在時刻
       _selectedDate = DateTime.now();
@@ -68,7 +74,6 @@ class _AddScheduleScreenState extends State<AddScheduleScreen> {
         );
       }
     } else {
-      // ★新規モード: 追加処理を呼ぶ
       await appState.addSchedule(
         _titleController.text,
         dateTime,
@@ -82,6 +87,18 @@ class _AddScheduleScreenState extends State<AddScheduleScreen> {
     }
     if (mounted) {
       Navigator.pop(context); // 画面を閉じる
+    }
+  }
+  Future<void> pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await
+    picker.pickImage(source: ImageSource.gallery);
+    if(pickedFile != null) {
+      setState(() {
+        _selectedImageFile = File(pickedFile.path);
+        //新しい画像を選択したら既存のURLはリセット
+        _initialImageUrl = null;
+      });
     }
   }
   @override
