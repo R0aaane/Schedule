@@ -40,6 +40,20 @@ class _AddScheduleScreenState extends State<AddScheduleScreen> {
       _selectedTime = TimeOfDay.now();
     }
   }
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      setState(() {
+        _selectedImageFile = File(pickedFile.path);
+        //新しい画像を選択した場合はリセット
+        _initialImageUrl = null;
+      });
+    }
+  }
+
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
         context: context,
@@ -53,6 +67,7 @@ class _AddScheduleScreenState extends State<AddScheduleScreen> {
         context: context, initialTime: _selectedTime);
     if (picked != null) setState(() => _selectedTime = picked);
   }
+
   void _save() async {
     if (_titleController.text.isEmpty) return;
     final dateTime = DateTime(
@@ -60,33 +75,60 @@ class _AddScheduleScreenState extends State<AddScheduleScreen> {
       _selectedTime.hour, _selectedTime.minute,
     );
     final appState = context.read<AppState>();
-    if (widget.scheduleToEdit != null) {
-      // ★編集モード: 更新処理を呼ぶ
-      await appState.updateSchedule(
-        widget.scheduleToEdit!.id,
-        _titleController.text,
-        dateTime,
-        _descController.text,
-      );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('変更を保存しました')),
-        );
+
+    String? finalImageUrl;
+
+    if (_selectedImageFile != null) {
+      //　新しい画像が選択されていた場合はアップロード
+      finalImageUrl = await appState.uploadImage(_selectedImageFile!);
+      if (finalImageUrl == null) {
+        //アップロード失敗
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('画像のアップロードに失敗しました。')));
+        }
+        return;
       }
-    } else {
-      await appState.addSchedule(
-        _titleController.text,
-        dateTime,
-        _descController.text,
-      );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('追加しました')),
-        );
+      else if (_initialImageUrl != null) {
+        //既存画像があればそちらを使用
+        finalImageUrl = _initialImageUrl;
       }
-    }
-    if (mounted) {
-      Navigator.pop(context); // 画面を閉じる
+
+      //FireStoreへの書き込み
+      if (widget.scheduleToEdit != null) {
+        //編集画面へ
+        await appState.updateSchedule(
+          widget.scheduleToEdit!.id,
+          _titleController.text,
+          dateTime,
+          _descController.text,
+          imageUrl: finalImageUrl, //画像Urlを渡す
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('変更を保存しました')));
+        }
+      } else {
+        await appState.addSchedule(
+          _titleController.text,
+          dateTime,
+          _descController.text,
+          imageUrl: finalImageUrl, //画像Urlを渡す
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('追加しました')));
+        }
+      }
+
+      if (mounted) {
+        // 編集から戻る際は、詳細画面も閉じるため2回popする
+        if (widget.scheduleToEdit != null) {
+          Navigator.popUntil(context, (route) => route.isFirst);
+        } else {
+          Navigator.pop(context);
+        }
+      }
     }
   }
   Future<void> pickImage() async {
@@ -115,6 +157,16 @@ class _AddScheduleScreenState extends State<AddScheduleScreen> {
           padding: const EdgeInsets.all(16),
           child: ListView(
             children: [
+
+              Container(
+                height: 200,
+                color: Colors.grey[200],
+                alignment: Alignment.center,
+                child: GestureDetector(
+                  onTap: _pickImage,
+                  child: _buildImagePreview(),
+                ),
+              ),
               TextField(
                 controller: _titleController,
                 decoration: const InputDecoration(labelText: 'タイトル', border: OutlineInputBorder()),
@@ -151,6 +203,41 @@ class _AddScheduleScreenState extends State<AddScheduleScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  // ★画像プレビューを構築するヘルパー関数
+  Widget _buildImagePreview() {
+    // 1. 新しく画像が選択された場合
+    if (_selectedImageFile != null) {
+      return Image.file(
+        _selectedImageFile!,
+        fit: BoxFit.cover,
+        width: double.infinity,
+      );
+    }
+    // 2. 既存の画像URLがある場合（編集時）
+    if (widget.scheduleToEdit?.imageUrl != null) {
+      return Image.network(
+        widget.scheduleToEdit!.imageUrl!,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return const Center(child: CircularProgressIndicator());
+        },
+        errorBuilder: (context, error, stackTrace) => const Center(child: Icon(Icons.broken_image)),
+      );
+    }
+
+    // 3. 画像がない場合
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: const [
+        Icon(Icons.camera_alt, size: 40, color: Colors.grey),
+        SizedBox(height: 8),
+        Text('タップして写真を選択', style: TextStyle(color: Colors.grey)),
+      ],
     );
   }
 }

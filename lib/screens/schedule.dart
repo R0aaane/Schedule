@@ -111,19 +111,30 @@ Icon(Icons.edit),
 
       body: SingleChildScrollView(
 
-        padding: const EdgeInsets.all(24),
+        child: Column( // ★Centerを外し、Columnで縦に並べる
+            children: [
+            // ★追加: 画像表示エリアを一番上に配置
+            if (schedule.imageUrl != null)
+        Image.network(
+        schedule.imageUrl!,
+        height: 250,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Container(height: 250, color: Colors.grey[200], child: const Center(child: CircularProgressIndicator()));
+        },
+        errorBuilder: (context, error, stackTrace) => Container(height: 250, color: Colors.grey[200], child: const Center(child: Icon(Icons.broken_image, size: 50))),
+      ),
 
-        child: Center(
-
-          child: Container(
-
-            constraints: const BoxConstraints(maxWidth: 800), // Webで見やすい幅制限
-
-            child: Column(
-
-              crossAxisAlignment: CrossAxisAlignment.start,
-
-              children: [
+      // 既存のコンテンツエリアをContainerで包む
+      Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 800),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
 
                 // タイトル
 
@@ -195,14 +206,16 @@ Icon(Icons.edit),
                 ),
 
               ],
+              ),
 
             ),
 
           ),
-
-        ),
+        ],
 
       ),
+
+    ),
 
     );
   }
