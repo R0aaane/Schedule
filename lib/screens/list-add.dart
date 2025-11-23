@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, Uint8List;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -210,11 +211,29 @@ class _AddScheduleScreenState extends State<AddScheduleScreen> {
   Widget _buildImagePreview() {
     // 1. 新しく画像が選択された場合
     if (_selectedImageFile != null) {
-      return Image.file(
-        _selectedImageFile!,
-        fit: BoxFit.cover,
-        width: double.infinity,
-      );
+      if (kIsWeb) {
+        return FutureBuilder<Uint8List>(
+            future:_selectedImageFile!.readAsBytes(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.done && snapshot.data != null) {
+            return Image.memory(
+              snapshot.data!, //バイトデータで表示
+              fit: BoxFit.cover,
+              width: double.infinity,
+            );
+          }
+          //データ読み込み中はロード表示
+          return const Center(child:
+          CircularProgressIndicator());
+        },
+        );
+      } else {
+        return Image.file(
+          _selectedImageFile!,
+          fit: BoxFit.cover,
+          width: double.infinity,
+        );
+      }
     }
     // 2. 既存の画像URLがある場合（編集時）
     if (widget.scheduleToEdit?.imageUrl != null) {
